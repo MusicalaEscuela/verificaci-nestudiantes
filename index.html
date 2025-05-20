@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Buscador de Estudiantes Musicala</title>
+  <style>
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background-color: #F4F4F4;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .header {
+      background: #3949AB;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    .header h1 {
+      margin: 0;
+    }
+    .subtitulo {
+      text-align: center;
+      font-size: 18px;
+      margin: 20px;
+      color: #555;
+    }
+    .search-container {
+      text-align: center;
+      margin: 20px;
+    }
+    .search-container input {
+      padding: 10px;
+      width: 300px;
+      font-size: 16px;
+      border: 1px solid #CCC;
+      border-radius: 5px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto 40px;
+      padding: 20px;
+      background: white;
+      box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #CCC;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background: #E8EAF6;
+    }
+    tr:nth-child(even) {
+      background: #F9F9F9;
+    }
+    tr:hover {
+      background: #DCE775;
+    }
+    .footer {
+      text-align: center;
+      font-size: 14px;
+      color: #777;
+      margin-top: 30px;
+    }
+    a.boton {
+      display: inline-block;
+      padding: 6px 10px;
+      background-color: #5C6BC0;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .nombre-estudiante {
+      font-weight: 700;
+      font-size: 16px;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎵 Buscador de Estudiantes Musicala</h1>
+  </div>
+
+  <div class="subtitulo" id="subtitulo">Cargando datos...</div>
+
+  <div class="search-container">
+    <input type="text" id="filtroNombre" placeholder="🔍 Filtrar por nombre...">
+  </div>
+
+  <div class="container" id="content">
+    Cargando datos...
+  </div>
+
+  <div class="footer">
+    © Buscador de Estudiantes Musicala 2025. Todos los derechos reservados.
+  </div>
+
+  <script>
+    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQQO-CBQoN1QZ4GFExJWmPz6YNLO6rhaIsWBv-Whlu9okpZRpcxfUtLYeAMKaiNOQJrrf3Vcwhk32kZ/pub?gid=2130299316&single=true&output=tsv";
+
+    let datos = [];
+
+    async function cargarDatos() {
+      try {
+        const response = await fetch(sheetURL);
+        const tsv = await response.text();
+        const filas = tsv.trim().split("\n").map(row => row.split("\t"));
+
+        // Eliminar encabezados y filas inválidas
+        datos = filas.filter((fila, index) => index > 1 && fila[0] && fila[0].toLowerCase() !== "estudiantes");
+
+        // Ordenar con "Activo" primero
+        datos.sort((a, b) => {
+          const estadoA = (a[1] || "").toLowerCase();
+          const estadoB = (b[1] || "").toLowerCase();
+          if (estadoA === "activo" && estadoB !== "activo") return -1;
+          if (estadoB === "activo" && estadoA !== "activo") return 1;
+          return 0;
+        });
+
+        document.getElementById("subtitulo").textContent = `Mostrando ${datos.length} registros`;
+        renderizarTabla(datos);
+
+        document.getElementById("filtroNombre").addEventListener("input", e => {
+          const filtro = e.target.value.toLowerCase();
+          const filtrados = datos.filter(fila => (fila[0] || "").toLowerCase().includes(filtro));
+          document.getElementById("subtitulo").textContent = `Mostrando ${filtrados.length} registros`;
+          renderizarTabla(filtrados);
+        });
+
+      } catch (error) {
+        document.getElementById("content").innerHTML = "❌ Error al cargar los datos.";
+        console.error("Error:", error);
+      }
+    }
+
+    function esURLValida(valor) {
+      return typeof valor === "string" && valor.startsWith("http");
+    }
+
+    function obtenerIconoEstado(estado) {
+      const est = (estado || "").toLowerCase();
+      if (est === "activo") return "🟢";
+      if (est === "no registro") return "🔵";
+      if (est === "en pausa") return "🟠";
+      if (est === "inactivo") return "🔴";
+      return "⚪";
+    }
+
+    function renderizarTabla(filas) {
+      const content = document.getElementById("content");
+      let html = "<table><thead><tr><th>Nombre</th><th>Estado</th><th>Fecha</th><th>📷 Foto</th><th>AP</th><th>AS</th><th>AV</th></tr></thead><tbody>";
+
+      filas.forEach(fila => {
+        const nombre = fila[0] || "";
+        const estado = fila[1] || "";
+        const fecha = fila[4] || "";
+        const fotoURL = fila[8] || "";
+        const apURL = fila[40] || "";
+        const apTexto = fila[41] || "";
+        const asURL = fila[43] || "";
+        const asTexto = fila[44] || "";
+        const avURL = fila[46] || "";
+        const avTexto = fila[47] || "";
+
+        html += "<tr>";
+        html += `<td class="nombre-estudiante">${nombre}</td>`;
+        html += `<td>${obtenerIconoEstado(estado)}</td>`;
+        html += `<td>${fecha}</td>`;
+        html += `<td>${esURLValida(fotoURL) ? `<a href="${fotoURL}" target="_blank">📷</a>` : ""}</td>`;
+        html += `<td>${esURLValida(apURL) ? `<a class="boton" href="${apURL}" target="_blank">${apTexto}</a>` : ""}</td>`;
+        html += `<td>${esURLValida(asURL) ? `<a class="boton" href="${asURL}" target="_blank">${asTexto}</a>` : ""}</td>`;
+        html += `<td>${esURLValida(avURL) ? `<a class="boton" href="${avURL}" target="_blank">${avTexto}</a>` : ""}</td>`;
+        html += "</tr>";
+      });
+
+      html += "</tbody></table>";
+      content.innerHTML = html;
+    }
+
+    window.onload = cargarDatos;
+  </script>
+</body>
+</html>
