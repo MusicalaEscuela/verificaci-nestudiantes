@@ -53,7 +53,7 @@
       background-color: #3949AB;
     }
     .container {
-      max-width: 1000px;
+      max-width: 1100px;
       margin: 0 auto 40px;
       padding: 20px;
       background: white;
@@ -143,7 +143,7 @@
           return 0;
         });
 
-        // Autocompletar nombres únicos
+        // Autocompletar nombres
         const datalist = document.getElementById("nombresUnicos");
         const nombresUnicos = [...new Set(datos.map(f => f[0]).filter(Boolean))].sort();
         datalist.innerHTML = nombresUnicos.map(n => `<option value="${n}">`).join("");
@@ -167,10 +167,10 @@
     function mostrarPendientes() {
       const pendientes = datos.filter(fila => {
         const estado = (fila[1] || "").toLowerCase();
-        const apURL = fila[40] || "";
-        const esPendiente = ["activo", "no registro", "en pausa"].includes(estado);
-        const sinRegistro1 = !apURL.startsWith("http");
-        return esPendiente && sinRegistro1;
+        const registro1 = fila[40] || "";
+        const esValido = ["activo", "no registro", "en pausa"].includes(estado);
+        const sinLink = !registro1.startsWith("http");
+        return esValido && sinLink;
       });
       renderizarTabla(pendientes);
       document.getElementById("subtitulo").textContent = `Mostrando ${pendientes.length} pendientes`;
@@ -180,30 +180,41 @@
       return typeof valor === "string" && valor.startsWith("http");
     }
 
+    function obtenerIconoEstado(estado) {
+      const e = (estado || "").toLowerCase();
+      if (e === "activo") return "🟢";
+      if (e === "no registro") return "🔵";
+      if (e === "en pausa") return "🟠";
+      if (e === "inactivo") return "🔴";
+      return "⚪";
+    }
+
     function renderizarTabla(filas) {
       const content = document.getElementById("content");
-      let html = "<table><thead><tr><th>Nombre</th><th>Edad</th><th>📷 Foto</th><th>Registro 1</th><th>Registro 2</th><th>Registro 3</th><th>Observaciones</th></tr></thead><tbody>";
+      let html = "<table><thead><tr><th>Nombre</th><th>Estado</th><th>Edad</th><th>📷 Foto</th><th>Registro 1</th><th>Registro 2</th><th>Registro 3</th><th>Observaciones</th></tr></thead><tbody>";
 
       filas.forEach(fila => {
         const nombre = fila[0] || "";
-        const edad = fila[1] || "";
-        const fotoURL = fila[8] || "";
-        const apURL = fila[40] || "";
+        const estado = fila[1] || "";
+        const edad = fila[4] || "";       // Columna E
+        const fotoURL = fila[8] || "";    // Columna I
+        const apURL = fila[40] || "";     // Columna AO
         const apTexto = fila[41] || "";
-        const asURL = fila[43] || "";
+        const asURL = fila[43] || "";     // Columna AR
         const asTexto = fila[44] || "";
-        const avURL = fila[46] || "";
+        const avURL = fila[46] || "";     // Columna AU
         const avTexto = fila[47] || "";
-        const observaciones = fila[49] || "";
+        const obs = fila[49] || "";       // Columna AX
 
         html += "<tr>";
         html += `<td class="nombre-estudiante">${nombre}</td>`;
+        html += `<td>${obtenerIconoEstado(estado)}</td>`;
         html += `<td>${edad}</td>`;
         html += `<td>${esURLValida(fotoURL) ? `<a href="${fotoURL}" target="_blank">📷</a>` : ""}</td>`;
         html += `<td>${esURLValida(apURL) ? `<a class="boton" href="${apURL}" target="_blank">${apTexto}</a>` : ""}</td>`;
         html += `<td>${esURLValida(asURL) ? `<a class="boton" href="${asURL}" target="_blank">${asTexto}</a>` : ""}</td>`;
         html += `<td>${esURLValida(avURL) ? `<a class="boton" href="${avURL}" target="_blank">${avTexto}</a>` : ""}</td>`;
-        html += `<td>${observaciones}</td>`;
+        html += `<td>${obs}</td>`;
         html += "</tr>";
       });
 
