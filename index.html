@@ -31,12 +31,26 @@
       text-align: center;
       margin: 20px;
     }
-    .search-container input {
+    .search-container input,
+    .search-container datalist {
       padding: 10px;
       width: 300px;
       font-size: 16px;
       border: 1px solid #CCC;
       border-radius: 5px;
+      margin-right: 10px;
+    }
+    .search-container button {
+      padding: 10px 16px;
+      font-size: 14px;
+      background-color: #5C6BC0;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .search-container button:hover {
+      background-color: #3949AB;
     }
     .container {
       max-width: 1000px;
@@ -94,7 +108,9 @@
   <div class="subtitulo" id="subtitulo">Cargando datos...</div>
 
   <div class="search-container">
-    <input type="text" id="filtroNombre" placeholder="🔍 Filtrar por nombre...">
+    <input list="nombresUnicos" id="filtroNombre" placeholder="🔍 Filtrar por nombre...">
+    <datalist id="nombresUnicos"></datalist>
+    <button onclick="mostrarPendientes()">🔎 Pendientes</button>
   </div>
 
   <div class="container" id="content">
@@ -116,10 +132,9 @@
         const tsv = await response.text();
         const filas = tsv.trim().split("\n").map(row => row.split("\t"));
 
-        // Eliminar encabezados y filas inválidas
         datos = filas.filter((fila, index) => index > 1 && fila[0] && fila[0].toLowerCase() !== "estudiantes");
 
-        // Ordenar con "Activo" primero
+        // Ordenar: Activos primero
         datos.sort((a, b) => {
           const estadoA = (a[1] || "").toLowerCase();
           const estadoB = (b[1] || "").toLowerCase();
@@ -128,14 +143,19 @@
           return 0;
         });
 
-        document.getElementById("subtitulo").textContent = `Mostrando ${datos.length} registros`;
+        // Autocompletar nombres únicos
+        const datalist = document.getElementById("nombresUnicos");
+        const nombresUnicos = [...new Set(datos.map(f => f[0]).filter(Boolean))].sort();
+        datalist.innerHTML = nombresUnicos.map(n => `<option value="${n}">`).join("");
+
         renderizarTabla(datos);
+        document.getElementById("subtitulo").textContent = `Mostrando ${datos.length} registros`;
 
         document.getElementById("filtroNombre").addEventListener("input", e => {
           const filtro = e.target.value.toLowerCase();
           const filtrados = datos.filter(fila => (fila[0] || "").toLowerCase().includes(filtro));
-          document.getElementById("subtitulo").textContent = `Mostrando ${filtrados.length} registros`;
           renderizarTabla(filtrados);
+          document.getElementById("subtitulo").textContent = `Mostrando ${filtrados.length} registros`;
         });
 
       } catch (error) {
@@ -144,27 +164,29 @@
       }
     }
 
+    function mostrarPendientes() {
+      const pendientes = datos.filter(fila => {
+        const estado = (fila[1] || "").toLowerCase();
+        const apURL = fila[40] || "";
+        const esPendiente = ["activo", "no registro", "en pausa"].includes(estado);
+        const sinRegistro1 = !apURL.startsWith("http");
+        return esPendiente && sinRegistro1;
+      });
+      renderizarTabla(pendientes);
+      document.getElementById("subtitulo").textContent = `Mostrando ${pendientes.length} pendientes`;
+    }
+
     function esURLValida(valor) {
       return typeof valor === "string" && valor.startsWith("http");
     }
 
-    function obtenerIconoEstado(estado) {
-      const est = (estado || "").toLowerCase();
-      if (est === "activo") return "🟢";
-      if (est === "no registro") return "🔵";
-      if (est === "en pausa") return "🟠";
-      if (est === "inactivo") return "🔴";
-      return "⚪";
-    }
-
     function renderizarTabla(filas) {
       const content = document.getElementById("content");
-      let html = "<table><thead><tr><th>Nombre</th><th>Estado</th><th>Fecha</th><th>📷 Foto</th><th>AP</th><th>AS</th><th>AV</th></tr></thead><tbody>";
+      let html = "<table><thead><tr><th>Nombre</th><th>Edad</th><th>📷 Foto</th><th>Registro 1</th><th>Registro 2</th><th>Registro 3</th><th>Observaciones</th></tr></thead><tbody>";
 
       filas.forEach(fila => {
         const nombre = fila[0] || "";
-        const estado = fila[1] || "";
-        const fecha = fila[4] || "";
+        const edad = fila[1] || "";
         const fotoURL = fila[8] || "";
         const apURL = fila[40] || "";
         const apTexto = fila[41] || "";
@@ -172,15 +194,16 @@
         const asTexto = fila[44] || "";
         const avURL = fila[46] || "";
         const avTexto = fila[47] || "";
+        const observaciones = fila[49] || "";
 
         html += "<tr>";
         html += `<td class="nombre-estudiante">${nombre}</td>`;
-        html += `<td>${obtenerIconoEstado(estado)}</td>`;
-        html += `<td>${fecha}</td>`;
+        html += `<td>${edad}</td>`;
         html += `<td>${esURLValida(fotoURL) ? `<a href="${fotoURL}" target="_blank">📷</a>` : ""}</td>`;
         html += `<td>${esURLValida(apURL) ? `<a class="boton" href="${apURL}" target="_blank">${apTexto}</a>` : ""}</td>`;
         html += `<td>${esURLValida(asURL) ? `<a class="boton" href="${asURL}" target="_blank">${asTexto}</a>` : ""}</td>`;
         html += `<td>${esURLValida(avURL) ? `<a class="boton" href="${avURL}" target="_blank">${avTexto}</a>` : ""}</td>`;
+        html += `<td>${observaciones}</td>`;
         html += "</tr>";
       });
 
